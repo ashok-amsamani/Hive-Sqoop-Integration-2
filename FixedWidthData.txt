@@ -1,0 +1,6 @@
+1 Ashok     Chennai             2020-10-20          3510000     
+2 Shyam     Chennai             2020-10-21          3015000     
+3 Naveen    Chennai             2020-10-22          2720000     
+4 Vinoth    Bangalore           2020-11-21          3330000     
+5 Rajeev    Bangalore           2020-11-22          3730000     
+6 Mahendran Bangalore           2020-11-23          3730000     
