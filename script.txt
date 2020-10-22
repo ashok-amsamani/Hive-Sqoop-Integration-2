@@ -1,0 +1,73 @@
+1.Copy the fixed width data into a linux /home/hduser/
+
+	FixedWidthData.txt
+	
+	-- use winscp and copy to Linux location.
+
+2.Load into a hive table called cust_fixed_raw and a column rawdata.
+
+	create table cust_fixed_raw(rawdata string);
+
+	load data local inpath '/home/hduser/FixedWidthData.txt' overwrite into table cust_fixed_raw;
+
+	-- select * from cust_fixed_raw; => ensure the data
+
+3.Create another hive table. Parse the raw data and store it there.
+
+	create table cust_delimited_parsed_temp(id int, name varchar(10), city varchar(20), birthdate date, age varchar(2), salary int);
+
+	insert into cust_delimited_parsed_temp select trim(substr(rawdata,1,2)),trim(substr(rawdata,3,10)),trim(substr(rawdata,13,20)),trim(substr(rawdata,33,20)),trim(substr(rawdata,53,2)),trim(substr(rawdata,55,10)) from cust_fixed_raw;
+	
+
+	-- select  * from cust_delimited_parsed_temp => ensure the data
+
+4. create a table in mysql
+
+	create database if not exists custdb;
+	use custdb;
+
+	create table if not exists cust_data_mysql(id int, name varchar(10), city varchar(20), birthdate date, age varchar(2), salary int);
+
+
+5. Export only id, birthdate and salary column into a mysql table cust_data_mysql using sqoop export.
+
+	-- loads data into HDFS directory
+	insert overwrite directory '/user/hduser/custexport' row format delimited fields terminated by ',' select id,birthdate,salary from cust_delimited_parsed_temp;
+
+	-- exporing only required columns. 1st value in hdfs location -> 1st col of table, specified in --column.
+	sqoop export --connect jdbc:mysql://localhost/custdb --username root --password root --table cust_data_mysql --fields-terminated-by ',' --export-dir custexport --columns id,birthdate,salary;
+
+
+6. Load only chennai data to another table called cust_parsed_ch_orc of type orc format partitioned basedon birthdate.
+
+	-- creating ORC file
+	create table cust_parsed_ch_orc(id int, name varchar(10), city varchar(20), age varchar(2), salary int)
+	partitioned by (birthdate date) row format delimited fields terminated by ',' lines terminated by '\n' stored as orcfile 
+
+
+	insert into table cust_parsed_ch_orc partition (birthdate) select id, name,city,age,salary,birthdate from cust_delimited_parsed_temp where city = 'Chennai';
+
+7.Create a json table called cust_parsed_blr_json
+
+
+	cd /home/hduser/
+
+	-- pull jar from Maven
+	wget https://repo1.maven.org/maven2/org/apache/hive/hcatalog/hive-hcatalog-core/1.2.1/hive-hcatalog-core-1.2.1.jar
+
+	--Load the above JSON serde jar in hive lib directory (/usr/local/hive/lib) or add this jar in hive session.
+	add jar /home/hduser/hive-hcatalog-core-1.2.1.jar;
+
+	-- table with JsonSerde
+	create external table cust_parsed_blr_json(id int, name string,city string, age int) ROW FORMAT SERDE 'org.apache.hive.hcatalog.data.JsonSerDe'	stored as textfile location '/user/hduser/custjson';
+
+
+8.Insert into the cust_parsed_blr_json only bangalore.
+
+	insert overwrite table cust_parsed_blr_json select id,name,city,age from cust_delimited_parsed_temp where city = 'Bangalore';
+
+	 #Verify the output - hadoop fs -cat /user/hduser/custjson/*
+
+	{"id":4,"name":"Vinoth","city":"Bangalore","age":33}
+	{"id":5,"name":"Rajeev","city":"Bangalore","age":37}
+	{"id":6,"name":"Mahendran","city":"Bangalore","age":37}
