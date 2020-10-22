@@ -9,6 +9,8 @@ It covers:
   3. Load data from linux to hive table (locad data local inpath)
   4. Move hive data to hdfs (insert overwrite directory)
   5. Sqoop export with limited columns (--columns)
-  6. Creating ORC table 
-  7. Download Json serde from Maven and add to hive session
-  8. Create table with JsonSerde
+  6. Creating ORC table
+  7. Dynamic partition
+  8. Download Json serde from Maven (hive-hcatalog-core)
+  9. Add jar to hive session
+  10. Create table with JsonSerde
